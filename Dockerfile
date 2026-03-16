@@ -1,36 +1,33 @@
-# Build stage
-FROM node:18-alpine AS builder
+# syntax=docker/dockerfile:1
 
-# Set working directory
-WORKDIR /app
+# ---- Frontend build ----
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
 
-# Copy package.json and package-lock.json
-COPY package*.json ./
+COPY frontend/package*.json ./
+RUN npm ci
 
-# Install dependencies
-RUN npm ci --only=production
-
-# Copy source code
-COPY . .
-
-# Build the application
+COPY frontend/ ./
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine
+# ---- Backend build ----
+FROM maven:3.9-eclipse-temurin-21 AS backend-builder
+WORKDIR /app/backend
 
-# Copy built application from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY backend/pom.xml ./
+RUN mvn -q -DskipTests dependency:go-offline
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY backend/src ./src
+COPY --from=frontend-builder /app/frontend/dist ./src/main/resources/static
 
-# Expose port
-EXPOSE 80
+RUN mvn -q -DskipTests clean package
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
+# ---- Runtime ----
+FROM eclipse-temurin:21-jre
+WORKDIR /app
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+COPY --from=backend-builder /app/backend/target/backend-1.0.0.jar ./app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

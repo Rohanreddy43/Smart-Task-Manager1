@@ -1,0 +1,46 @@
+# Development Environment Configuration
+spring:
+  config:
+    activate:
+      on-profile: dev
+  
+  # H2 Database for Development
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  
+  # H2 Console
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  # JPA Configuration for Development
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  
+  # File Upload Configuration for Development
+  servlet:
+    multipart:
+      location: ${java.io.tmpdir}/uploads
+
+# JWT Configuration for Development
+app:
+  jwtSecret: dev-jwt-secret-key-for-development-only-and-long-enough-for-hs512-signing
+
+# Logging Configuration for Development
+logging:
+  level:
+    com.smarttaskmanager: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
